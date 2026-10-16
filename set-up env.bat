@@ -71,8 +71,10 @@ echo.
 REM Periksa apakah environment proyek-gaming sudah ada
 "%CONDA_CMD%" env list | findstr /C:"proyek-gaming" >nul
 if errorlevel 1 (
-    echo [INFO] Membuat environment baru: proyek-gaming dengan Python 3.12
-    "%CONDA_CMD%" create -n proyek-gaming python=3.12 pip -y
+    echo [INFO] Menyetujui lisensi / menggunakan channel conda-forge...
+    "%CONDA_CMD%" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main >nul 2>&1
+    echo [INFO] Membuat environment baru: proyek-gaming dengan Python 3.12...
+    "%CONDA_CMD%" create -n proyek-gaming -c conda-forge python=3.12 pip -y
     if errorlevel 1 goto :error
 ) else (
     echo [INFO] Environment proyek-gaming sudah tersedia.
