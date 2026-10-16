@@ -1,1 +1,60 @@
-set-up project.bat
+# ==========================================
+# File Konfigurasi & Setup Lokal (Opsional)
+# ==========================================
+# Biarkan script .bat di-track agar rekan tim bisa setup env otomatis:
+# (Jangan ignore set-up env.bat / set-up project.bat jika tim butuh file ini)
+
+# ==========================================
+# Python & Bytecode
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# ==========================================
+# Virtual Environment
+# ==========================================
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ==========================================
+# Pengujian & Code Quality
+# ==========================================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# ==========================================
+# File Temporary Microsoft Office (Word/Docx)
+# ==========================================
+# Mengabaikan file temporary Word saat dibuka (~$namafile.docx)
+~$*.docx
+~$*.doc
+~$*.xlsx
+~$*.pptx
+
+# ==========================================
+# IDE & Text Editor
+# ==========================================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.vs/
+
+# ==========================================
+# Sistem Operasi (OS Generated Files)
+# ==========================================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+._*

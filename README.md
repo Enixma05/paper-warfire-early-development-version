@@ -2,8 +2,15 @@
 
 Proyek game sederhana menggunakan Spec-Driven Development (SDD).
 
-## Struktur
-- docs/: spesifikasi proyek
-- src/: source code
-- assets/: aset game
-- tests/: pengujian
+## Struktur Proyek
+- `PANDUAN_ROLE_TIM.md`: Panduan alur kerja dan pembagian peran 3 anggota tim
+- `docs/`: Spesifikasi proyek & dokumen perencanaan (SDD/GDD, rubrik UTS)
+- `src/`: Source code game terorganisir per domain:
+  - `src/core/`: Engine inti, Game Loop, State Manager, Input Handler (Role 1)
+  - `src/player/`: Logika dan controller pemain (Role 2)
+  - `src/enemy/`: Logika musuh dan AI (Role 2)
+  - `src/game/`: Logika level, rule manager, collision & spawner (Role 1 & 2)
+  - `src/ui/`: Komponen visual UI, menu, dan HUD (Role 3)
+- `assets/`: Aset multimedia (sprites, audio, fonts) (Role 3)
+- `tests/`: Pengujian unit dan skenario game
+
