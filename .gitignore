@@ -1,10 +1,4 @@
 # ==========================================
-# File Konfigurasi & Setup Lokal (Opsional)
-# ==========================================
-# Biarkan script .bat di-track agar rekan tim bisa setup env otomatis:
-# (Jangan ignore set-up env.bat / set-up project.bat jika tim butuh file ini)
-
-# ==========================================
 # Python & Bytecode
 # ==========================================
 __pycache__/
@@ -19,6 +13,8 @@ __pycache__/
 venv/
 env/
 ENV/
+.proyek-gaming/
+proyek-gaming/
 env.bak/
 venv.bak/
 

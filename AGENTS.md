@@ -6,25 +6,31 @@ Dokumen ini mendefinisikan aturan dan petunjuk bagi AI Agent dalam menjalankan p
 
 ## 1. Environment & Eksekusi Python
 
-Proyek ini menggunakan **Conda Environment** khusus bernama `proyek-gaming` (Python 3.12).
-Referensi pembuatan dan aktivasi environment tercatat pada [`set-up env.bat`](file:///d:/Documents/Kuliahan/Tugas%20Kuliah/SEDANG%20DIKERJAKAN/GAME/Final%20Project/set-up%20env.bat).
+Proyek ini menggunakan **Virtual Environment** bernama `proyek-gaming` yang merujuk pada [`requirements.txt`](file:///d:/Documents/Kuliahan/Tugas%20Kuliah/SEDANG%20DIKERJAKAN/GAME/Final%20Project/requirements.txt).
+Script inisialisasi otomatis disediakan melalui [`setup_env.py`](file:///d:/Documents/Kuliahan/Tugas%20Kuliah/SEDANG%20DIKERJAKAN/GAME/Final%20Project/setup_env.py).
 
-### Aturan Eksekusi Python & Command Line:
-1. **Gunakan Python dari Environment `proyek-gaming`:**
-   Saat menjalankan perintah terminal (PowerShell / Command Prompt), panggil interpreter python melalui path absolut env atau condabin:
-   - **Python Executable:**
+### Aturan Inisialisasi & Eksekusi bagi AI Agent:
+1. **Inisialisasi Environment Otomatis:**
+   Jika environment belum tersedia di mesin lokal atau paket belum terpasang, jalankan:
+   ```powershell
+   python setup_env.py
+   ```
+   Script ini akan mendeteksi (atau membuat) venv `proyek-gaming` dan menginstal seluruh isi `requirements.txt`.
+
+2. **Aturan Eksekusi Perintah Python & Pytest:**
+   Selalu gunakan Python dari virtual environment `proyek-gaming`:
+   - **Jika menggunakan Conda:**
      ```powershell
-     C:\Users\ASUS\miniconda3\envs\proyek-gaming\python.exe <script.py>
+     C:\Users\<Username>\miniconda3\envs\proyek-gaming\python.exe <script.py>
      ```
-   - **Pip Executable:**
+   - **Jika menggunakan venv lokal di root:**
      ```powershell
-     C:\Users\ASUS\miniconda3\envs\proyek-gaming\python.exe -m pip <command>
+     .\proyek-gaming\Scripts\python.exe <script.py>
      ```
    - **Pytest:**
      ```powershell
-     C:\Users\ASUS\miniconda3\envs\proyek-gaming\python.exe -m pytest tests/
+     <path_ke_proyek-gaming_python> -m pytest tests/
      ```
-2. **Jangan gunakan Python sistem global** (`Python313`) tanpa mengaktifkan env, karena paket inti (`pygame`, `pyyaml`, `pytest`) terpasang di `proyek-gaming`.
 
 ---
 
@@ -35,30 +41,21 @@ Sebelum mengeksekusi script game, modul baru, atau test runner:
 1. **Analisis Import/Modul Baru:**
    Periksa apakah kode membutuhkan package eksternal selain standard library Python dan dependensi saat ini (`pygame`, `pyyaml`, `pytest`).
 2. **Cek Ketersediaan Modul:**
-   Jika ada import pihak ketiga yang baru atau belum dipastikan terpasang, uji terlebih dahulu di environment `proyek-gaming`:
+   Uji terlebih dahulu di environment `proyek-gaming`:
    ```powershell
-   C:\Users\ASUS\miniconda3\envs\proyek-gaming\python.exe -c "import <nama_package>"
+   <path_ke_proyek-gaming_python> -c "import <nama_package>"
    ```
 3. **Instalasi Sebelum Eksekusi:**
-   Jika modul belum terpasang (`ModuleNotFoundError`), pasang paket terlebih dahulu sebelum menjalankan kode utama.
+   Jika modul belum terpasang (`ModuleNotFoundError`), pasang paket ke environment `proyek-gaming` terlebih dahulu sebelum menjalankan kode utama.
 
 ### B. Prosedur Penambahan Dependensi Baru:
 Jika agen atau pengguna menambahkan package/library baru ke proyek:
 1. **Wajib Memasang ke Environment `proyek-gaming`:**
    ```powershell
-   C:\Users\ASUS\miniconda3\envs\proyek-gaming\python.exe -m pip install <nama_package>
+   <path_ke_proyek-gaming_python> -m pip install <nama_package>
    ```
 2. **Wajib Memperbarui [`requirements.txt`](file:///d:/Documents/Kuliahan/Tugas%20Kuliah/SEDANG%20DIKERJAKAN/GAME/Final%20Project/requirements.txt):**
-   - Perbarui daftar dependensi agar versi tetap sinkron dan reproducible:
-     ```powershell
-     C:\Users\ASUS\miniconda3\envs\proyek-gaming\python.exe -m pip freeze > requirements.txt
-     ```
-3. **Wajib Memperbarui [`set-up env.bat`](file:///d:/Documents/Kuliahan/Tugas%20Kuliah/SEDANG%20DIKERJAKAN/GAME/Final%20Project/set-up%20env.bat):**
-   - Tambahkan nama package baru ke baris instalasi pip pada file batch:
-     ```cmd
-     python -m pip install pytest pyyaml pygame <nama_package_baru>
-     ```
-   - Hal ini memastikan rekan tim lain yang menjalankan `set-up env.bat` langsung mendapatkan dependensi yang sama secara otomatis.
+   - Tambahkan nama package dan versinya ke `requirements.txt` agar rekan tim lain langsung mendapatkan dependensi yang sama saat menjalankan `python setup_env.py`.
 
 ---
 
