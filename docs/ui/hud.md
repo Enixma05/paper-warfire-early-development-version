@@ -58,7 +58,7 @@ Ketika pemain mengklik salah satu unit di medan perang:
 - **Status Tindakan:** Menampilkan label apakah unit sudah menerima perintah di giliran ini atau belum.
 
 ### C. Panel Input & Validasi Koordinat (Targeting Panel)
-- Pemain dapat memasukkan koordinat melalui kotak input angka/huruf atau mengklik langsung pada tile grid.
+- Pemain memasukkan koordinat sasaran secara manual melalui kotak input teks pada panel samping (misal: input kolom X dan baris Y, atau notasi alfanumerik `H8`). Penargetan sengaja dirancang tanpa klik langsung pada medan perang untuk mempertegas nuansa permainan perang kertas dan strategi koordinat buta.
 - **Validasi Instan:**
   - Jika koordinat sah: Kotak berbingkai **Hijau (#536B4F)**, tombol *Konfirmasi Aksi* menyala aktif.
   - Jika koordinat di luar jangkauan: Kotak berbingkai **Merah (#E05252)**, muncul teks error kecil *"Di luar jangkauan tembak!"*, tombol konfirmasi nonaktif.

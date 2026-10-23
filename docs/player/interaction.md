@@ -17,7 +17,7 @@ Interaksi pemain diatur secara terstruktur selama **Planning Phase**:
                    |                                         |
       [Tampilkan Radius Gerak]                   [Tampilkan Jangkauan Tembak]
                    |                                         |
-      [Klik Tile Tujuan Valid]                   [Input / Klik Koordinat Target]
+      [Klik Tile Tujuan Valid]                   [Input Koordinat Target Manual]
                    |                                         |
          [Preview Ghost Marker]                   [Tampilkan Reticle Target AoE]
                    |                                         |
@@ -39,8 +39,8 @@ Interaksi pemain diatur secara terstruktur selama **Planning Phase**:
 
 Paper Warfire menghadirkan keunikan di mana serangan proyektil dan artileri ditujukan ke koordinat spesifik medan perang:
 
-1. **Format Input Koordinat:**
-   - Pemain dapat memasukkan koordinat melalui kotak teks UI (misal: `X: 14, Y: 09` atau label alfanumerik `H8`), atau langsung mengklik tile pada medan perang.
+1. **Format Input Koordinat Manual:**
+   - Pemain wajib memasukkan koordinat secara manual melalui kotak input teks UI pada panel perintah (misal: koordinat angka `X: 14, Y: 09` atau notasi alfanumerik `H8`). Penargetan tidak dilakukan dengan mengklik tile pada medan perang agar memperkuat elemen perencanaan taktis ala perang kertas.
 2. **Validasi Jangkauan (Attack Range Validation):**
    - Sistem memverifikasi jarak antara unit penyerang dan koordinat target:
      $$\text{Distance}(\text{Unit}, \text{Target}) \le \text{unit.attack\_range}$$
