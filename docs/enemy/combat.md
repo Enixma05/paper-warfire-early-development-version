@@ -13,10 +13,9 @@ Seluruh unit musuh memiliki atribut dasar yang seimbang dengan unit pemain, deng
 | **Pistol Unit** | 70 HP | 4 tile | 6 tile | 25 DMG | Single Tile (1x1) | 1x1 tile | Infanteri serbaguna, pengintai garis depan, biaya rendah |
 | **Machine Gun** | 90 HP | 3 tile | 8 tile | 20 DMG | Area 3x3 tile | 1x1 tile | Supresi area, mengancam formasi kelompok unit pemain |
 | **Sniper Unit** | 60 HP | 2 tile | 12 tile | 60 DMG | Single Tile (1x1) | 1x1 tile | *High single-target burst*, eliminasi unit prioritas |
-| **Tank Unit** | 200 HP | 3 tile | 15 tile | 50 DMG | Area 3x3 tile | 2x3 tile | Benteng garis depan (*heavy vanguard*), perusak konsentrasi |
-| **Mortar Unit** | 100 HP | 2 tile | 18 tile | 40 DMG | Area 3x3 tile | 1x2 tile | Artileri menengah, tembakan parabola melompati rintangan |
-| **Artillery Unit**| 120 HP | 1 tile | 25 tile | 75 DMG | Area 3x3 tile | 2x2 tile | *Long-range siege*, penguasa medan dan pembuka kabut perang |
-| **Grenade Attack**| - | Khusus | 5 tile | 50 DMG | Area 3x3 tile | - | Serangan jarak pendek berdaya ledak tinggi |
+| **Tank Unit** | 200 HP | 3 tile | 15 tile | 40-60 DMG | Area 3x3 tile | 2x3 tile | Benteng garis depan (*heavy vanguard*), perusak konsentrasi |
+| **Mortar Unit** | 100 HP | 2 tile | 18 tile | 30 DMG | Area 3x3 tile | 1x2 tile | Artileri menengah, tembakan parabola melompati rintangan |
+| **Artillery Unit**| 120 HP | 1 tile | 25 tile | 70 DMG | Area 3x3 tile | 2x2 tile | *Long-range siege*, penguasa medan dan pembuka kabut perang |
 
 ---
 
@@ -30,13 +29,10 @@ $$\text{Final Damage} = \text{Base Damage} \times \text{Distance Falloff Multipl
 1. **Distance Falloff (Untuk Serangan Area 3x3):**
    - **Pusat Titik Koordinat (Center Tile):** $100\%$ Base Damage.
    - **Tile Sekitar Pusat (Surrounding 8 Tiles):** $50\%$ Base Damage.
-2. **Terrain Defense Multiplier:**
-   - **Open Ground / Rumput:** $1.0\times$ (Kerusakan penuh).
-   - **Forest / Rindang:** $0.8\times$ (Memberikan cover 20% mitigasi damage).
-   - **Rocky / Benteng:** $0.6\times$ (Memberikan cover 40% mitigasi damage).
-   - **Water / Rawa:** $1.2\times$ (Unit terjebak menerima ekstra 20% damage).
-3. **Upgrade Modifier:**
-   - Unit yang telah mendapatkan *Penetration Upgrade* menaikkan base multiplier sebesar $+15\%$.
+2. **Upgrade Modifier:**
+   - Scope Upgrade : memperluas jarak serangan.
+   - Penetration Upgrade : memperbesar damage output.
+   - magazine Upgrade : menambah satu tembakan.
 
 ---
 
