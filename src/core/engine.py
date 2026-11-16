@@ -10,7 +10,7 @@ from typing import Optional
 from src.core.constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, TARGET_FPS, WINDOW_TITLE,
     GameState, TurnSubState, Team, Visibility,
-    COLOR_BG, COLOR_GRID, COLOR_ACCENT,
+    COLOR_BG, COLOR_GRID, COLOR_ACCENT, COLOR_TEXT, COLOR_TEXT_DIM,
     COLOR_FOG_UNEXPLORED, COLOR_FOG_EXPLORED,
     COLOR_TERRAIN_PLAINS, COLOR_TERRAIN_FOREST, COLOR_TERRAIN_MOUNTAIN, COLOR_TERRAIN_WATER,
     GRID_COLS, GRID_ROWS, TILE_SIZE, GRID_OFFSET_X, GRID_OFFSET_Y
@@ -41,6 +41,8 @@ class GameEngine:
         self.state_mgr = GameStateManager()
         self.input_handler = InputHandler()
         self.hud: Optional[InGameHUD] = None
+        self.floating_texts: list = []  # Floating damage text feedback (BUG-006)
+        self._last_processed_war_result = None
 
         # Modals & Screens
         self.main_menu = MainMenu(
@@ -88,6 +90,17 @@ class GameEngine:
             if not self.headless:
                 pygame.display.flip()
 
+    def spawn_floating_text(self, gx: int, gy: int, text: str, color: tuple = (255, 90, 90)) -> None:
+        """Spawns an animated combat damage or status popup above tile (gx, gy) (BUG-006)."""
+        self.floating_texts.append({
+            "gx": gx,
+            "gy": gy,
+            "text": text,
+            "color": color,
+            "timer": 2.2,
+            "offset_y": 0.0
+        })
+
     def _process_events(self) -> None:
         events = pygame.event.get()
         for event in events:
@@ -99,10 +112,18 @@ class GameEngine:
                 self.main_menu.handle_event(event)
 
             elif curr_state == GameState.PLAYING:
-                # Check for pause
-                if event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_p):
-                    self.state_mgr.state = GameState.PAUSE
-                    return
+                # Check if typing in coordinate box (BUG-002: prevent hotkey collision)
+                coord_active = bool(self.hud and self.hud.coord_input.is_active)
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_p):
+                        if coord_active:
+                            if event.key == pygame.K_ESCAPE:
+                                self.hud.coord_input.is_active = False
+                            # Do not pause game while typing
+                        else:
+                            self.state_mgr.state = GameState.PAUSE
+                            return
 
                 # Pass to HUD
                 if self.hud:
@@ -150,21 +171,54 @@ class GameEngine:
                 self.hud.coord_input.clear()
             return
 
-        # Otherwise, check if clicking on a friendly unit to select it
-        unit = sess.battlefield.get_unit_at(gx, gy)
-        if unit and unit.team == Team.PLAYER:
-            ctrl.select_unit_at(gx, gy)
-            self.hud.coord_input.clear()
-            self.hud.status_feedback = f"Selected {unit.unit_type.value} [{unit.unit_id}]."
+        # Check unit at clicked position
+        clicked_unit = sess.battlefield.get_unit_at(gx, gy)
+        if clicked_unit:
+            if clicked_unit.team == Team.PLAYER:
+                # Select friendly unit
+                self.hud.inspected_enemy = None
+                ctrl.select_unit_at(gx, gy)
+                self.hud.coord_input.clear()
+                self.hud.status_feedback = f"Selected {clicked_unit.unit_type.value} [{clicked_unit.unit_id}]."
+            elif clicked_unit.team == Team.ENEMY and sess.player_fow.is_visible(clicked_unit.x, clicked_unit.y):
+                # Visible enemy tapped! Display hostile stats in Inspector (BUG-011)
+                self.hud.inspected_enemy = clicked_unit
+                ctrl.deselect()
+                self.hud.status_feedback = f"Inspecting enemy {clicked_unit.unit_type.value} [{clicked_unit.unit_id}]."
+                self.hud.coord_input.set_coordinate((gx, gy))
+            else:
+                self.hud.inspected_enemy = None
+                self.hud.coord_input.set_coordinate((gx, gy))
         else:
-            # Clicking empty or enemy tile puts coordinate in the coordinate input box
+            self.hud.inspected_enemy = None
             self.hud.coord_input.set_coordinate((gx, gy))
 
     def _update(self, dt: float) -> None:
         self.state_mgr.update(dt)
 
         if self.state_mgr.state == GameState.PLAYING:
-            self.input_handler.update_camera(dt)
+            # Disable WASD camera panning while user is typing in text box (BUG-002)
+            coord_active = bool(self.hud and self.hud.coord_input.is_active)
+            self.input_handler.update_camera(dt, disable_wasd=coord_active)
+
+            # Spawn floating damage feedback when war phase resolves (BUG-006)
+            sess = self.state_mgr.session
+            if sess and sess.war_result and sess.war_result != self._last_processed_war_result:
+                self._last_processed_war_result = sess.war_result
+                for ce in sess.war_result.combat_events:
+                    if ce.damage_dealt > 0 and ce.victim:
+                        self.spawn_floating_text(ce.victim.x, ce.victim.y, f"-{ce.damage_dealt} DMG", (255, 75, 75))
+                    elif not ce.victim:
+                        self.spawn_floating_text(ce.target_coord[0], ce.target_coord[1], "MISS", (180, 185, 195))
+                for me in sess.war_result.move_events:
+                    if not me.success and me.clashed_with:
+                        self.spawn_floating_text(me.to_coord[0], me.to_coord[1], "CLASH!", (240, 190, 60))
+
+            # Update floating texts
+            for ft in self.floating_texts:
+                ft["timer"] -= dt
+                ft["offset_y"] += 14.0 * dt
+            self.floating_texts = [ft for ft in self.floating_texts if ft["timer"] > 0]
 
             # Check if state transitioned to game over
             if self.state_mgr.state in (GameState.VICTORY, GameState.DEFEAT):
@@ -205,7 +259,7 @@ class GameEngine:
         fow = sess.player_fow
         ctrl = sess.player_ctrl
 
-        # 1. Render Terrain Tiles
+        # 1. Render Terrain Tiles with Fog of War (BUG-003 & BUG-009)
         for x in range(bf.cols):
             for y in range(bf.rows):
                 sx, sy = self.input_handler.grid_to_screen(x, y)
@@ -215,32 +269,83 @@ class GameEngine:
 
                     if vis == Visibility.UNEXPLORED:
                         tile_col = COLOR_FOG_UNEXPLORED
-                    elif vis == Visibility.EXPLORED:
-                        tile_col = COLOR_FOG_EXPLORED
+                        pygame.draw.rect(self.screen, tile_col, (sx, sy, TILE_SIZE, TILE_SIZE))
+                        pygame.draw.rect(self.screen, (22, 25, 32), (sx, sy, TILE_SIZE, TILE_SIZE), 1)
                     else:
+                        # Determine base terrain color
                         if tile.terrain_type == TerrainType.FOREST:
-                            tile_col = COLOR_TERRAIN_FOREST
+                            base_col = COLOR_TERRAIN_FOREST
                         elif tile.terrain_type == TerrainType.MOUNTAIN:
-                            tile_col = COLOR_TERRAIN_MOUNTAIN
+                            base_col = COLOR_TERRAIN_MOUNTAIN
                         elif tile.terrain_type == TerrainType.WATER:
-                            tile_col = COLOR_TERRAIN_WATER
+                            base_col = COLOR_TERRAIN_WATER
                         else:
-                            tile_col = COLOR_TERRAIN_PLAINS
+                            base_col = COLOR_TERRAIN_PLAINS
 
-                    pygame.draw.rect(self.screen, tile_col, (sx, sy, TILE_SIZE, TILE_SIZE))
-                    pygame.draw.rect(self.screen, COLOR_GRID, (sx, sy, TILE_SIZE, TILE_SIZE), 1)
+                        if vis == Visibility.EXPLORED:
+                            # Shrouded terrain: dimmed, but terrain contour remains visible forever (BUG-003)
+                            tile_col = (int(base_col[0] * 0.38), int(base_col[1] * 0.38), int(base_col[2] * 0.38))
+                            pygame.draw.rect(self.screen, tile_col, (sx, sy, TILE_SIZE, TILE_SIZE))
+                            pygame.draw.rect(self.screen, (40, 44, 52), (sx, sy, TILE_SIZE, TILE_SIZE), 1)
+                        else:
+                            # Full Visibility: bright terrain with geometric textures (BUG-009)
+                            pygame.draw.rect(self.screen, base_col, (sx, sy, TILE_SIZE, TILE_SIZE))
+                            pygame.draw.rect(self.screen, COLOR_GRID, (sx, sy, TILE_SIZE, TILE_SIZE), 1)
 
-        # 2. Movement Range Highlights (if unit selected and in MOVE mode)
+                            # Minimalist tactical terrain details
+                            cx, cy = sx + TILE_SIZE // 2, sy + TILE_SIZE // 2
+                            if tile.terrain_type == TerrainType.FOREST:
+                                # Tree triangle icon
+                                pts = [(cx, cy - 8), (cx - 7, cy + 6), (cx + 7, cy + 6)]
+                                pygame.draw.polygon(self.screen, (42, 105, 55), pts)
+                            elif tile.terrain_type == TerrainType.MOUNTAIN:
+                                # Rocky peak triangle icon
+                                pts = [(cx, cy - 9), (cx - 8, cy + 7), (cx + 8, cy + 7)]
+                                pygame.draw.polygon(self.screen, (160, 165, 175), pts)
+                                pygame.draw.line(self.screen, (90, 95, 105), (cx, cy - 9), (cx - 3, cy + 7), 2)
+                            elif tile.terrain_type == TerrainType.WATER:
+                                # Water waves
+                                pygame.draw.line(self.screen, (70, 140, 200), (sx + 8, cy - 3), (sx + TILE_SIZE - 8, cy - 3), 2)
+                                pygame.draw.line(self.screen, (70, 140, 200), (sx + 12, cy + 4), (sx + TILE_SIZE - 12, cy + 4), 2)
+
+        # 2. Render Axis Labels (Col A-X on top, Row 1-16 on left) (BUG-007, BUG-010)
+        for col_idx in range(bf.cols):
+            hx, hy = self.input_handler.grid_to_screen(col_idx, 0)
+            if -TILE_SIZE < hx < SCREEN_WIDTH - 300:
+                col_label = chr(ord('A') + col_idx)
+                FontManager.render_text(self.screen, col_label, hx + TILE_SIZE // 2, hy - 14, size=11, color=COLOR_TEXT_DIM, center=True)
+
+        for row_idx in range(bf.rows):
+            vx, vy = self.input_handler.grid_to_screen(0, row_idx)
+            if 40 < vy < SCREEN_HEIGHT - 30:
+                row_label = str(row_idx + 1)
+                FontManager.render_text(self.screen, row_label, vx - 10, vy + TILE_SIZE // 2, size=11, color=COLOR_TEXT_DIM, center=True)
+
+        # 3. Attack Range Highlight (BUG-005)
+        if ctrl.selected_unit and self.hud and self.hud.current_action_mode == CommandType.ATTACK:
+            max_rng = ctrl.selected_unit.get_effective_attack_range()
+            for rx in range(bf.cols):
+                for ry in range(bf.rows):
+                    dist = max(abs(ctrl.selected_unit.x - rx), abs(ctrl.selected_unit.y - ry))
+                    if dist <= max_rng:
+                        asx, asy = self.input_handler.grid_to_screen(rx, ry)
+                        if -TILE_SIZE <= asx < SCREEN_WIDTH - 290 and -TILE_SIZE <= asy < SCREEN_HEIGHT:
+                            range_surf = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+                            range_surf.fill((242, 193, 78, 22))
+                            self.screen.blit(range_surf, (asx, asy))
+                            pygame.draw.rect(self.screen, (242, 193, 78, 80), (asx, asy, TILE_SIZE, TILE_SIZE), 1)
+
+        # 4. Movement Range Highlights (if unit selected and in MOVE mode)
         if ctrl.selected_unit and self.hud and self.hud.current_action_mode == CommandType.MOVE:
             reachable = bf.get_reachable_tiles(ctrl.selected_unit)
             for rx, ry in reachable:
                 sx, sy = self.input_handler.grid_to_screen(rx, ry)
                 highlight_surf = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
-                highlight_surf.fill((242, 193, 78, 60))
+                highlight_surf.fill((74, 144, 226, 70))
                 self.screen.blit(highlight_surf, (sx, sy))
-                pygame.draw.rect(self.screen, COLOR_ACCENT, (sx, sy, TILE_SIZE, TILE_SIZE), 1)
+                pygame.draw.rect(self.screen, (100, 180, 255), (sx, sy, TILE_SIZE, TILE_SIZE), 1)
 
-        # 3. Render Units (Friendly units + Visible Enemy units)
+        # 5. Render Units (Friendly units + Visible Enemy units)
         for unit in bf.units:
             if not unit.is_alive:
                 continue
@@ -250,13 +355,52 @@ class GameEngine:
                 continue
 
             sx, sy = self.input_handler.grid_to_screen(unit.x, unit.y)
-            is_sel = (unit == ctrl.selected_unit)
+            is_sel = (unit == ctrl.selected_unit or (self.hud and unit == self.hud.inspected_enemy))
             VectorUnitRenderer.draw_unit(self.screen, unit, sx, sy, is_selected=is_sel)
 
-        # 4. Target reticle indicator (if coordinate entered in HUD)
+        # 6. Target Reticle & AoE 3x3 Visualizer (BUG-005)
         if self.hud and self.hud.coord_input.parsed_coord:
             tx, ty = self.hud.coord_input.parsed_coord
-            sx, sy = self.input_handler.grid_to_screen(tx, ty)
-            pygame.draw.rect(self.screen, (240, 80, 80), (sx, sy, TILE_SIZE, TILE_SIZE), 2)
-            pygame.draw.circle(self.screen, (240, 80, 80), (sx + TILE_SIZE // 2, sy + TILE_SIZE // 2), 6, 2)
+            aoe = ctrl.selected_unit.aoe_radius if (ctrl.selected_unit and self.hud.current_action_mode == CommandType.ATTACK) else 0
+
+            # Render 3x3 AoE splash area if unit has AoE
+            if aoe > 0:
+                for dx in range(-aoe, aoe + 1):
+                    for dy in range(-aoe, aoe + 1):
+                        ix, iy = tx + dx, ty + dy
+                        if bf.is_valid_coord(ix, iy):
+                            isx, isy = self.input_handler.grid_to_screen(ix, iy)
+                            if -TILE_SIZE <= isx < SCREEN_WIDTH - 290 and -TILE_SIZE <= isy < SCREEN_HEIGHT:
+                                is_center = (dx == 0 and dy == 0)
+                                aoe_surf = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+                                aoe_color = (235, 60, 60, 80) if is_center else (245, 140, 40, 50)
+                                aoe_surf.fill(aoe_color)
+                                self.screen.blit(aoe_surf, (isx, isy))
+                                pygame.draw.rect(self.screen, (240, 90, 70), (isx, isy, TILE_SIZE, TILE_SIZE), 1)
+
+            # Center target reticle crosshair
+            tsx, tsy = self.input_handler.grid_to_screen(tx, ty)
+            pygame.draw.rect(self.screen, (250, 70, 70), (tsx, tsy, TILE_SIZE, TILE_SIZE), 2)
+            pygame.draw.circle(self.screen, (250, 70, 70), (tsx + TILE_SIZE // 2, tsy + TILE_SIZE // 2), 7, 2)
+
+            # In-Range / Out-of-Range Status Label
+            if ctrl.selected_unit and self.hud.current_action_mode == CommandType.ATTACK:
+                dist = max(abs(ctrl.selected_unit.x - tx), abs(ctrl.selected_unit.y - ty))
+                in_range = dist <= ctrl.selected_unit.get_effective_attack_range()
+                stat_text = "[IN RANGE]" if in_range else "[OUT OF RANGE]"
+                stat_col = (80, 220, 100) if in_range else (250, 70, 70)
+                FontManager.render_text(self.screen, stat_text, tsx + TILE_SIZE // 2, tsy - 12, size=11, color=stat_col, center=True)
+
+        # 7. Render Floating Damage Text popups (BUG-006)
+        for ft in self.floating_texts:
+            fsx, fsy = self.input_handler.grid_to_screen(ft["gx"], ft["gy"])
+            FontManager.render_text(
+                self.screen,
+                ft["text"],
+                fsx + TILE_SIZE // 2,
+                fsy - int(ft["offset_y"]),
+                size=14,
+                color=ft["color"],
+                center=True
+            )
 

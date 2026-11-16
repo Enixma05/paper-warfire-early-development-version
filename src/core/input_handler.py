@@ -38,18 +38,21 @@ class InputHandler:
         sy = GRID_OFFSET_Y + self.camera_y + gy * TILE_SIZE
         return (sx, sy)
 
-    def update_camera(self, dt: float) -> None:
-        """Pans camera when arrow keys or WASD are held down."""
+    def update_camera(self, dt: float, disable_wasd: bool = False) -> None:
+        """Pans camera when arrow keys or WASD are held down.
+        If disable_wasd is True (e.g. typing in text box), WASD keys will not pan the camera.
+        """
         keys = pygame.key.get_pressed()
         step = int(self.pan_speed * dt)
+        allow_wasd = not disable_wasd
 
-        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+        if (allow_wasd and keys[pygame.K_a]) or keys[pygame.K_LEFT]:
             self.camera_x = min(100, self.camera_x + step)
-        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        if (allow_wasd and keys[pygame.K_d]) or keys[pygame.K_RIGHT]:
             self.camera_x = max(-200, self.camera_x - step)
-        if keys[pygame.K_w] or keys[pygame.K_UP]:
+        if (allow_wasd and keys[pygame.K_w]) or keys[pygame.K_UP]:
             self.camera_y = min(100, self.camera_y + step)
-        if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+        if (allow_wasd and keys[pygame.K_s]) or keys[pygame.K_DOWN]:
             self.camera_y = max(-150, self.camera_y - step)
 
     def reset_camera(self) -> None:

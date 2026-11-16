@@ -32,11 +32,11 @@ COLOR_PANEL_BORDER = (55, 60, 70)   # Border Gray
 COLOR_FOG_UNEXPLORED = (15, 17, 22) # Pitch black / very dark
 COLOR_FOG_EXPLORED = (25, 28, 35)   # Shrouded / dimmed terrain
 
-# Terrain Colors
-COLOR_TERRAIN_PLAINS = (45, 52, 43)    # Grass / neutral
-COLOR_TERRAIN_FOREST = (34, 60, 38)    # Deep foliage
-COLOR_TERRAIN_MOUNTAIN = (65, 68, 75)  # Rocky impassable
-COLOR_TERRAIN_WATER = (35, 55, 75)     # Swamp / hazard water
+# Terrain Colors (Distinct, high-contrast palette)
+COLOR_TERRAIN_PLAINS = (68, 98, 70)      # Natural Grass Plains
+COLOR_TERRAIN_FOREST = (30, 72, 40)      # Deep Forest Foliage
+COLOR_TERRAIN_MOUNTAIN = (120, 125, 135) # Rocky Mountain (Impassable)
+COLOR_TERRAIN_WATER = (42, 95, 145)      # Water Hazard / River
 
 # Global Game States
 class GameState(Enum):

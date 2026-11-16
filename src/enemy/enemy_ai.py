@@ -165,7 +165,7 @@ class EnemyAIController:
 
         # Look for recent last known positions (within last 3 turns)
         candidates = [
-            pos for uid, (pos_x, pos_y, turn) in self.memory.last_known_positions.items()
+            (pos_x, pos_y) for uid, (pos_x, pos_y, turn) in self.memory.last_known_positions.items()
             if current_turn - turn <= 3 and max(abs(unit.x - pos_x), abs(unit.y - pos_y)) <= unit.get_effective_attack_range()
         ]
 

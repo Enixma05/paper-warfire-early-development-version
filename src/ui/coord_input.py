@@ -68,7 +68,7 @@ class CoordinateInputBox:
             self.error_message = ""
         else:
             self.parsed_coord = None
-            self.error_message = "Invalid format! Use H8 or X,Y"
+            self.error_message = "Gunakan format H8 atau X,Y (1-24, 1-16)"
 
     def render(self, surface: pygame.Surface) -> None:
         # Border color based on validation state
@@ -86,14 +86,14 @@ class CoordinateInputBox:
         pygame.draw.rect(surface, border_color, self.rect, 2)
 
         # Text display
-        display_str = self.text if self.text else "Input Target (H8)..."
+        display_str = self.text if self.text else "H8 / X,Y..."
         text_color = COLOR_TEXT if self.text else COLOR_TEXT_DIM
         FontManager.render_text(
             surface,
             display_str,
             self.rect.x + 8,
             self.rect.y + 7,
-            size=16,
+            size=14,
             color=text_color
         )
 
@@ -104,17 +104,17 @@ class CoordinateInputBox:
                 self.error_message,
                 self.rect.x,
                 self.rect.bottom + 4,
-                size=12,
+                size=11,
                 color=(240, 80, 80)
             )
         elif self.parsed_coord:
-            coord_str = f"Target Tile: ({self.parsed_coord[0]}, {self.parsed_coord[1]})"
+            coord_str = f"Target: ({self.parsed_coord[0]}, {self.parsed_coord[1]}) | {Battlefield.format_coordinate(self.parsed_coord[0], self.parsed_coord[1])}"
             FontManager.render_text(
                 surface,
                 coord_str,
                 self.rect.x,
                 self.rect.bottom + 4,
-                size=12,
+                size=11,
                 color=(100, 200, 120)
             )
 

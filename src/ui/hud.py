@@ -12,6 +12,7 @@ from src.core.constants import (
     COLOR_PANEL_BORDER, TurnSubState, Team
 )
 from src.game.config import CommandType, DEFAULT_UPGRADES
+from src.game.base_unit import BaseUnit
 from src.player.player_unit import PlayerUnit
 from src.player.player_controller import PlayerController
 from src.core.state_manager import MatchSession
@@ -50,6 +51,7 @@ class InGameHUD:
         self.coord_input = CoordinateInputBox(SCREEN_WIDTH - 290, 250, width=170, height=28)
         self.current_action_mode: Optional[CommandType] = None
         self.status_feedback: str = ""
+        self.inspected_enemy: Optional[BaseUnit] = None  # Enemy inspection (BUG-011)
 
         # Setup persistent buttons
         panel_x = SCREEN_WIDTH - 300
@@ -82,6 +84,8 @@ class InGameHUD:
         )
 
     def set_action_mode(self, mode: CommandType) -> None:
+        if self.session.turn_substate != TurnSubState.PLANNING:
+            return
         self.current_action_mode = mode
         if mode == CommandType.MOVE:
             self.status_feedback = "Click a highlighted tile to set destination."
@@ -89,6 +93,8 @@ class InGameHUD:
             self.status_feedback = "Type target coordinate (e.g. H8) & press Confirm."
 
     def cancel_selected_action(self) -> None:
+        if self.session.turn_substate != TurnSubState.PLANNING:
+            return
         if self.session.player_ctrl.selected_unit:
             self.session.player_ctrl.cancel_unit_command(self.session.player_ctrl.selected_unit)
             self.status_feedback = "Unit command cleared."
@@ -96,6 +102,8 @@ class InGameHUD:
         self.coord_input.clear()
 
     def confirm_current_action(self) -> None:
+        if self.session.turn_substate != TurnSubState.PLANNING:
+            return
         ctrl = self.session.player_ctrl
         if not ctrl.selected_unit:
             self.status_feedback = "Select a friendly unit first!"
@@ -126,9 +134,18 @@ class InGameHUD:
             self.status_feedback = "Executing simultaneous orders..."
         elif self.session.turn_substate == TurnSubState.SUMMARY:
             self.session.advance_to_next_turn()
+            self.inspected_enemy = None
             self.status_feedback = f"Turn {self.session.current_turn} planning initiated."
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        # During SUMMARY or WAR phase, lock command inputs (BUG-013)
+        if self.session.turn_substate == TurnSubState.SUMMARY:
+            self.btn_ready.handle_event(event)
+            return
+
+        if self.session.turn_substate == TurnSubState.WAR_EXECUTION:
+            return
+
         # Pass to coordinate input box
         confirmed_coord = self.coord_input.handle_event(event)
         if confirmed_coord is not None:
@@ -157,30 +174,36 @@ class InGameHUD:
 
         # Turn Counter
         turn_str = f"TURN: {self.session.current_turn:02d} / {self.session.rules.max_turns}"
-        FontManager.render_text(surface, turn_str, 200, 17, size=16, color=COLOR_ACCENT)
+        FontManager.render_text(surface, turn_str, 190, 17, size=15, color=COLOR_ACCENT)
+
+        # Planning Timer (BUG-012)
+        if self.session.turn_substate == TurnSubState.PLANNING:
+            sec = max(0, int(self.session.planning_timer))
+            col = (255, 80, 80) if sec <= 10 else (240, 200, 60)
+            FontManager.render_text(surface, f"TIMER: {sec:02d}s", 325, 17, size=15, color=col)
 
         # Phase Banner
         if self.session.turn_substate == TurnSubState.PLANNING:
-            phase_text = "[ PLANNING PHASE ]"
+            phase_text = "[ PLANNING ]"
             phase_col = COLOR_ACCENT
         elif self.session.turn_substate == TurnSubState.WAR_EXECUTION:
-            phase_text = "[ WAR PHASE - EXECUTING... ]"
+            phase_text = "[ WAR PHASE ]"
             phase_col = COLOR_ENEMY
         else:
-            phase_text = "[ TURN SUMMARY ]"
+            phase_text = "[ SUMMARY ]"
             phase_col = (80, 200, 120)
 
-        FontManager.render_text(surface, phase_text, 440, 17, size=16, color=phase_col, center=True)
+        FontManager.render_text(surface, phase_text, 480, 17, size=15, color=phase_col, center=True)
 
         # Coin Wallet
         coin_str = f"COINS: {self.session.player_ctrl.coins}"
-        FontManager.render_text(surface, coin_str, 680, 17, size=16, color=(240, 210, 60))
+        FontManager.render_text(surface, coin_str, 660, 17, size=15, color=(240, 210, 60))
 
         # Squad Counters
         alive_players = len(self.session.player_ctrl.get_player_units())
         alive_enemies = len([u for u in self.session.battlefield.units if u.team == Team.ENEMY and u.is_alive])
         squad_str = f"UNITS: {alive_players} | HOSTILES: {alive_enemies}"
-        FontManager.render_text(surface, squad_str, 840, 17, size=16, color=COLOR_TEXT_DIM)
+        FontManager.render_text(surface, squad_str, 820, 17, size=15, color=COLOR_TEXT_DIM)
 
     def _render_tactical_panel(self, surface: pygame.Surface) -> None:
         panel_x = SCREEN_WIDTH - 300
@@ -188,50 +211,79 @@ class InGameHUD:
         pygame.draw.rect(surface, COLOR_PANEL_BG, panel_rect)
         pygame.draw.line(surface, COLOR_PANEL_BORDER, (panel_x, 50), (panel_x, SCREEN_HEIGHT - 30), 2)
 
-        # 1. Unit Inspector Section
-        sel = self.session.player_ctrl.selected_unit
-        FontManager.render_text(surface, "UNIT INSPECTOR", panel_x + 15, 60, size=14, color=COLOR_ACCENT)
+        # 1. Unit Inspector Section (Friendly Unit or Hostile Unit Intel - BUG-011)
+        if self.inspected_enemy:
+            ene = self.inspected_enemy
+            FontManager.render_text(surface, "UNIT INSPECTOR (HOSTILE)", panel_x + 15, 60, size=14, color=COLOR_ENEMY)
+            unit_title = f"{ene.unit_type.value} [{ene.unit_id}]"
+            FontManager.render_text(surface, unit_title, panel_x + 15, 80, size=16, color=COLOR_ENEMY)
 
-        if sel:
-            unit_title = f"{sel.unit_type.value} [{sel.unit_id}]"
-            FontManager.render_text(surface, unit_title, panel_x + 15, 80, size=16, color=COLOR_TEXT)
+            hp_str = f"HP: {ene.current_hp} / {ene.max_hp}"
+            FontManager.render_text(surface, hp_str, panel_x + 15, 104, size=14, color=(240, 120, 120))
 
-            hp_str = f"HP: {sel.current_hp} / {sel.max_hp}"
-            FontManager.render_text(surface, hp_str, panel_x + 15, 104, size=14, color=(100, 220, 120))
-
-            stats_str = f"Move: {sel.move_range} | Range: {sel.get_effective_attack_range()}"
+            stats_str = f"Move: {ene.move_range} | Range: {ene.get_effective_attack_range()}"
             FontManager.render_text(surface, stats_str, panel_x + 15, 124, size=13, color=COLOR_TEXT_DIM)
 
-            dmg_str = f"Base DMG: {sel.get_effective_damage()} | AoE: {'3x3' if sel.aoe_radius else 'Single'}"
+            dmg_str = f"Base DMG: {ene.get_effective_damage()} | AoE: {'3x3' if ene.aoe_radius else 'Single'}"
             FontManager.render_text(surface, dmg_str, panel_x + 15, 142, size=13, color=COLOR_TEXT_DIM)
 
-            cmd_status = f"Order: {sel.planned_command}" if sel.planned_command else "Order: None"
-            FontManager.render_text(surface, cmd_status, panel_x + 15, 162, size=12, color=COLOR_ACCENT)
+            FontManager.render_text(surface, "[HOSTILE TARGET - NO ORDERS]", panel_x + 15, 162, size=12, color=COLOR_ENEMY)
         else:
-            FontManager.render_text(surface, "No friendly unit selected.", panel_x + 15, 85, size=14, color=COLOR_TEXT_DIM)
-            FontManager.render_text(surface, "Click any blue unit on the grid.", panel_x + 15, 110, size=12, color=COLOR_TEXT_DIM)
+            sel = self.session.player_ctrl.selected_unit
+            FontManager.render_text(surface, "UNIT INSPECTOR", panel_x + 15, 60, size=14, color=COLOR_ACCENT)
 
-        # Action Buttons
-        self.btn_move.render(surface, is_active=(self.current_action_mode == CommandType.MOVE))
-        self.btn_attack.render(surface, is_active=(self.current_action_mode == CommandType.ATTACK))
+            if sel:
+                unit_title = f"{sel.unit_type.value} [{sel.unit_id}]"
+                FontManager.render_text(surface, unit_title, panel_x + 15, 80, size=16, color=COLOR_TEXT)
+
+                hp_str = f"HP: {sel.current_hp} / {sel.max_hp}"
+                FontManager.render_text(surface, hp_str, panel_x + 15, 104, size=14, color=(100, 220, 120))
+
+                stats_str = f"Move: {sel.move_range} | Range: {sel.get_effective_attack_range()}"
+                FontManager.render_text(surface, stats_str, panel_x + 15, 124, size=13, color=COLOR_TEXT_DIM)
+
+                dmg_str = f"Base DMG: {sel.get_effective_damage()} | AoE: {'3x3' if sel.aoe_radius else 'Single'}"
+                FontManager.render_text(surface, dmg_str, panel_x + 15, 142, size=13, color=COLOR_TEXT_DIM)
+
+                cmd_status = f"Order: {sel.planned_command}" if sel.planned_command else "Order: None"
+                FontManager.render_text(surface, cmd_status, panel_x + 15, 162, size=12, color=COLOR_ACCENT)
+            else:
+                FontManager.render_text(surface, "No friendly unit selected.", panel_x + 15, 85, size=14, color=COLOR_TEXT_DIM)
+                FontManager.render_text(surface, "Click any unit on grid to inspect.", panel_x + 15, 110, size=12, color=COLOR_TEXT_DIM)
+
+        # Action Buttons (Disabled during SUMMARY phase - BUG-013)
+        is_summary = (self.session.turn_substate == TurnSubState.SUMMARY)
+        self.btn_move.render(surface, is_active=(self.current_action_mode == CommandType.MOVE and not is_summary))
+        self.btn_attack.render(surface, is_active=(self.current_action_mode == CommandType.ATTACK and not is_summary))
         self.btn_cancel_action.render(surface)
 
-        # Target input
-        FontManager.render_text(surface, "MANUAL TARGET COORDINATE:", panel_x + 15, 232, size=12, color=COLOR_TEXT_DIM)
+        # Target input (BUG-010)
+        FontManager.render_text(surface, "MANUAL TARGET (H8 / X,Y 1-24,1-16):", panel_x + 15, 232, size=11, color=COLOR_TEXT_DIM)
         self.coord_input.render(surface)
         self.btn_confirm.render(surface)
 
-        # 2. Command Queue Section
-        FontManager.render_text(surface, "PLANNED ORDERS QUEUE:", panel_x + 15, 310, size=14, color=COLOR_ACCENT)
-        queue = self.session.player_ctrl.get_command_queue()
-        qy = 332
-        if queue:
-            for u, cmd in queue[:6]:
-                q_text = f"• {u.unit_type.value}: {cmd.command_type.name} -> {cmd.target_coord}"
-                FontManager.render_text(surface, q_text, panel_x + 15, qy, size=12, color=COLOR_TEXT)
-                qy += 18
+        # 2. Command Queue Section / Summary View
+        if is_summary:
+            FontManager.render_text(surface, "SUMMARY & CASUALTIES:", panel_x + 15, 310, size=14, color=(80, 200, 120))
+            qy = 332
+            # Show recent combat events
+            if self.session.match_log:
+                for line in self.session.match_log[-6:]:
+                    FontManager.render_text(surface, f"• {line[:32]}", panel_x + 15, qy, size=11, color=COLOR_TEXT)
+                    qy += 18
+            else:
+                FontManager.render_text(surface, "No casualties recorded.", panel_x + 15, qy, size=12, color=COLOR_TEXT_DIM)
         else:
-            FontManager.render_text(surface, "No orders planned yet.", panel_x + 15, qy, size=12, color=COLOR_TEXT_DIM)
+            FontManager.render_text(surface, "PLANNED ORDERS QUEUE:", panel_x + 15, 310, size=14, color=COLOR_ACCENT)
+            queue = self.session.player_ctrl.get_command_queue()
+            qy = 332
+            if queue:
+                for u, cmd in queue[:6]:
+                    q_text = f"• {u.unit_type.value}: {cmd.command_type.name} -> {cmd.target_coord}"
+                    FontManager.render_text(surface, q_text, panel_x + 15, qy, size=12, color=COLOR_TEXT)
+                    qy += 18
+            else:
+                FontManager.render_text(surface, "No orders planned yet.", panel_x + 15, qy, size=12, color=COLOR_TEXT_DIM)
 
         # 3. Status feedback line
         if self.status_feedback:
@@ -247,6 +299,8 @@ class InGameHUD:
         else:
             self.btn_ready.text = "EXECUTING ORDERS..."
             self.btn_ready.color = (100, 40, 40)
+
+        self.btn_ready.render(surface)
 
         self.btn_ready.render(surface)
 

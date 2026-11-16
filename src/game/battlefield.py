@@ -40,32 +40,32 @@ class Battlefield:
     def generate_terrain(self, seed: Optional[int] = None) -> None:
         """
         Generates tactical terrain:
-        - Cols 0-3: Player initial zone (Clear plains, few cover trees)
-        - Cols 4-19: Neutral zone (Strategic choke point mountains, forest cover, swamps)
-        - Cols 20-23: Enemy initial zone (Clear plains, few cover trees)
+        - Cols 0-3: Player initial zone (Clear plains, few cover trees, guaranteed passable)
+        - Cols 4-19: Neutral tactical zone (Mountains, dense forests, swamps/water, plains)
+        - Cols 20-23: Enemy initial zone (Clear plains, few cover trees, guaranteed passable)
         """
         rng = random.Random(seed) if seed is not None else random.Random()
 
         for x in range(self.cols):
             for y in range(self.rows):
                 if x < 4 or x >= self.cols - 4:
-                    # Spawn zones
+                    # Guaranteed safe spawn zones for player and enemy
                     roll = rng.random()
-                    if roll < 0.15:
+                    if roll < 0.20:
                         t = TerrainType.FOREST
                     else:
                         t = TerrainType.PLAINS
                 else:
-                    # Contested central battlefield
+                    # Contested central battlefield with all 4 tactical terrain types
                     roll = rng.random()
-                    if roll < 0.10:
-                        t = TerrainType.MOUNTAIN
-                    elif roll < 0.30:
-                        t = TerrainType.FOREST
-                    elif roll < 0.42:
-                        t = TerrainType.WATER
+                    if roll < 0.14:
+                        t = TerrainType.MOUNTAIN  # Rock obstacle
+                    elif roll < 0.38:
+                        t = TerrainType.FOREST    # Cover defense
+                    elif roll < 0.52:
+                        t = TerrainType.WATER     # Water hazard
                     else:
-                        t = TerrainType.PLAINS
+                        t = TerrainType.PLAINS    # Standard battlefield
 
                 self.grid[x][y].terrain_type = t
                 self.grid[x][y].occupant = None
@@ -185,6 +185,9 @@ class Battlefield:
                     y = int(parts[1])
                     if 0 <= x < GRID_COLS and 0 <= y < GRID_ROWS:
                         return (x, y)
+                    # Support 1-indexed input (e.g. 1-24, 1-16) when users type 24, 16
+                    if 1 <= x <= GRID_COLS and 1 <= y <= GRID_ROWS:
+                        return (x - 1, y - 1)
 
         # Try alphanumeric like 'H8' or 'X16'
         # First char is column A-X -> 0-23

@@ -1,0 +1,55 @@
+Waktu test = 16-November-2026 
+start = 18.00 WITA
+end = 19.00 WITA
+Paper Warfire
+first test :
+1. kontrol masih tabrakan, contoh (saat memasukkan koordinat P malah tereksekusi key P untuk pause game, begitu juga saat memasukan koordinat W,A,S,D malah yang di eksekusi Gerakan map)
+2. Program tiba tiba berhenti (belum tau penyebabnya)
+3. kurang penjelasan X,Y pada koordinat
+4. unit enemy berada di posisi random setiap mulai permainan baru
+5. perbesar kanvas permainan (sekarang max baru X=X Y=16)
+6. jangkauan serangan (range) unit belum terlihat, dan indikator setiap serangan unit belum terlihat seperti 3x3
+7. belum bisa liat info enemy saat di tap enemy
+8. urutan eksekusi setiap unit perturn; move > attack
+9. move pada setiap unit masih belum jelas radiusnya (karna adanya perbedaan terrain yang random, terrain hanya 2, tanah dan air)
+10. belum ada Waktu hitung mundur untuk seriap Planning Phese
+11. Fog of War Belum berfungsi sepenuhnya, kabut yang sudah terbuka bisa tertutup lagi saat sebuah unit mati (harusnya kabut tidak bisa tertutup)
+12. pada fase summary (setelah war phase) diberikan Waktu untuk melihat kondisi medan perang kemudian saat summary phase player tidak diperbolehkan melakukan aksi apapun sebelum memamusi planning phase.
+13. tambahkan damage yg di hasilkan saat unit berhasil menyerang musuh.
+
+
+
+pesan error no 2:
+Traceback (most recent call last):
+  File "C:\Users\user2\video-game\main.py", line 31, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\user2\video-game\main.py", line 28, in main
+    engine.run()
+    ~~~~~~~~~~^^
+  File "C:\Users\user2\video-game\src\core\engine.py", line 84, in run
+    self._process_events()
+    ~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\user2\video-game\src\core\engine.py", line 109, in _process_events
+    self.hud.handle_event(event)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\user2\video-game\src\ui\hud.py", line 142, in handle_event
+    self.btn_ready.handle_event(event)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\user2\video-game\src\ui\hud.py", line 34, in handle_event
+    self.callback()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\user2\video-game\src\ui\hud.py", line 125, in on_ready_clicked
+    self.session.start_war_phase()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\user2\video-game\src\core\state_manager.py", line 98, in start_war_phase
+    self.enemy_ai.plan_turn(self.current_turn)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user2\video-game\src\enemy\enemy_ai.py", line 84, in plan_turn
+    cmd = self._plan_unit_action(enemy, visible_players, claimed_destinations, current_turn)
+  File "C:\Users\user2\video-game\src\enemy\enemy_ai.py", line 118, in _plan_unit_action
+    bombard_cmd = self._try_blind_bombardment(unit, current_turn)
+  File "C:\Users\user2\video-game\src\enemy\enemy_ai.py", line 168, in _try_blind_bombardment
+    pos for uid, (pos_x, pos_y, turn) in self.memory.last_known_positions.items()
+    ^^^
+NameError: name 'pos' is not defined. Did you mean: 'pow'?
