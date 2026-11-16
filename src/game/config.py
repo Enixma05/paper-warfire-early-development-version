@@ -235,6 +235,7 @@ DEFAULT_UPGRADES: Dict[str, UpgradeItem] = {
 @dataclass
 class GameRules:
     max_turns: int = 25
+    planning_turn_time_limit: float = 60.0  # Seconds allowed for planning per turn (BUG-012)
     contact_damage_on_collision: int = 10
     aoe_falloff_center_mult: float = 1.0
     aoe_falloff_surround_mult: float = 0.5

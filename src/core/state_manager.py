@@ -37,6 +37,7 @@ class MatchSession:
 
         self.current_turn = 1
         self.turn_substate = TurnSubState.PLANNING
+        self.planning_timer = self.rules.planning_turn_time_limit  # Countdown timer for planning phase (BUG-012)
         self.war_execution_timer = 0.0
         self.war_result: Optional[WarPhaseResult] = None
         self.match_log: List[str] = []
@@ -48,49 +49,42 @@ class MatchSession:
         self.enemy_fow.update_visibility(self.battlefield.units)
 
     def _spawn_initial_squads(self) -> None:
-        """Deploys standard squads on opposite sides of the battlefield."""
-        # Player squad (Left side, Cols 1-3)
+        """Deploys standard squads on opposite sides of the battlefield.
+        Guarantees deterministic, structured spawn positions (BUG-008).
+        """
+        # Ensure spawn zone tiles are passable Plains
+        for x in range(4):
+            for y in range(GRID_ROWS):
+                self.battlefield.grid[x][y].terrain_type = TerrainType.PLAINS
+        for x in range(GRID_COLS - 4, GRID_COLS):
+            for y in range(GRID_ROWS):
+                self.battlefield.grid[x][y].terrain_type = TerrainType.PLAINS
+
+        # Player squad (Left side, Cols 1-2)
         player_roster = [
             (UnitType.PISTOL, 1, 3),
             (UnitType.MACHINE_GUN, 1, 6),
             (UnitType.TANK, 1, 9),
             (UnitType.SNIPER, 1, 13),
-            (UnitType.MORTAR, 2, 5),
+            (UnitType.MORTAR, 2, 4),
             (UnitType.ARTILLERY, 2, 11),
         ]
         for idx, (utype, qx, qy) in enumerate(player_roster):
-            # Find closest passable tile in player zone
-            placed = False
-            for dx in range(3):
-                for dy in range(4):
-                    tx, ty = qx + dx, min(GRID_ROWS - 1, max(0, qy + dy - 2))
-                    u = PlayerUnit(f"P_{utype.value}_{idx+1}", utype, tx, ty)
-                    if self.battlefield.place_unit(u, tx, ty):
-                        placed = True
-                        break
-                if placed:
-                    break
+            u = PlayerUnit(f"P_{utype.value}_{idx+1}", utype, qx, qy)
+            self.battlefield.place_unit(u, qx, qy)
 
-        # Enemy squad (Right side, Cols 20-22)
+        # Enemy squad (Right side, Cols 20-22) - Deterministic deployment
         enemy_roster = [
-            (UnitType.PISTOL, 21, 3),
-            (UnitType.MACHINE_GUN, 21, 6),
-            (UnitType.TANK, 20, 9),
-            (UnitType.SNIPER, 21, 13),
-            (UnitType.MORTAR, 22, 5),
-            (UnitType.ARTILLERY, 21, 11),
+            (UnitType.PISTOL, 22, 3),
+            (UnitType.MACHINE_GUN, 22, 6),
+            (UnitType.TANK, 20, 8),
+            (UnitType.SNIPER, 22, 13),
+            (UnitType.MORTAR, 21, 4),
+            (UnitType.ARTILLERY, 20, 11),
         ]
         for idx, (utype, qx, qy) in enumerate(enemy_roster):
-            placed = False
-            for dx in range(3):
-                for dy in range(4):
-                    tx, ty = min(GRID_COLS - 1, qx + dx), min(GRID_ROWS - 1, max(0, qy + dy - 2))
-                    u = EnemyUnit(f"E_{utype.value}_{idx+1}", utype, tx, ty)
-                    if self.battlefield.place_unit(u, tx, ty):
-                        placed = True
-                        break
-                if placed:
-                    break
+            u = EnemyUnit(f"E_{utype.value}_{idx+1}", utype, qx, qy)
+            self.battlefield.place_unit(u, qx, qy)
 
     def start_war_phase(self) -> None:
         """Transitions from PLANNING to WAR_EXECUTION."""
@@ -128,6 +122,7 @@ class MatchSession:
         """Advances turn counter and resets to PLANNING substate."""
         self.current_turn += 1
         self.turn_substate = TurnSubState.PLANNING
+        self.planning_timer = self.rules.planning_turn_time_limit  # Reset countdown timer (BUG-012)
         self.war_result = None
         self.player_ctrl.deselect()
         self.player_fow.clear_temporary_reveals()
@@ -174,7 +169,14 @@ class GameStateManager:
 
     def update(self, dt: float) -> None:
         if self.state == GameState.PLAYING and self.session:
-            if self.session.turn_substate == TurnSubState.WAR_EXECUTION:
+            # Planning phase countdown timer (BUG-012)
+            if self.session.turn_substate == TurnSubState.PLANNING:
+                self.session.planning_timer -= dt
+                if self.session.planning_timer <= 0.0:
+                    self.session.planning_timer = 0.0
+                    self.session.start_war_phase()
+
+            elif self.session.turn_substate == TurnSubState.WAR_EXECUTION:
                 self.session.war_execution_timer -= dt
                 if self.session.war_execution_timer <= 0.0:
                     self.session.end_war_phase()

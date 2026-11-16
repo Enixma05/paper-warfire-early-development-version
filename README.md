@@ -3,6 +3,7 @@
 **Paper Warfire** adalah game strategi taktis berbasis giliran (*2D Grid-Based Turn-Based Strategy*) yang mengusung mekanik perencanaan perintah simultan (**WEGO**), kabut perang dinamis (**Fog of War**), dan penargetan serangan koordinat manual dengan visual *Geometric Minimalist 2D* yang terinspirasi dari permainan perang di atas kertas buku berpetak.
 
 Proyek ini dikembangkan menggunakan pendekatan **Spec-Driven Development (SDD)** untuk penugasan mata kuliah Pengembangan Game:
+
 - **Phase 1 (Selesai):** Perencanaan ide, cetak biru arsitektur (*Software Design Description*), spesifikasi mekanik, dan rubrik evaluasi.
 - **Phase 2 (Saat Ini — Aktif):** Pengembangan kode modular, kecerdasan buatan (*Rule-Based AI*), integrasi audio-visual, dan pengujian otomatis (*automated testing*).
 
@@ -39,22 +40,26 @@ Apresiasi dan ucapan terima kasih kami sampaikan kepada beliau atas fondasi ide 
 ## 🚀 Panduan Menjalankan Game
 
 ### 1. Prasyarat Lingkungan Kerja
+
 Pastikan Python 3.12+ telah terpasang di komputer Anda. Virtual environment `proyek-gaming` telah dikonfigurasi dengan pustaka `pygame`, `pyyaml`, dan `pytest`.
 
 Jika baru pertama kali melakukan clone atau environment belum terpasang:
+
 ```powershell
 python setup_env.py
 ```
 
 ### 2. Menjalankan Permainan (GUI Mode)
+
 Jalankan game menggunakan interpreter Python dari virtual environment `proyek-gaming`:
 
 - **Cara Langsung (Rekomendasi Windows):**
+
   ```powershell
   .\proyek-gaming\Scripts\python.exe main.py
   ```
-
 - **Atau dengan Mengaktifkan Virtual Environment Terlebih Dahulu:**
+
   ```powershell
   # Aktifkan virtual environment
   .\proyek-gaming\Scripts\Activate.ps1
@@ -64,7 +69,9 @@ Jalankan game menggunakan interpreter Python dari virtual environment `proyek-ga
   ```
 
 ### 3. Menjalankan Uji Cepat Smoke-Test (Headless Mode)
+
 Untuk menguji engine game secara cepat di latar belakang tanpa membuka jendela GUI:
+
 ```powershell
 .\proyek-gaming\Scripts\python.exe main.py --headless
 ```
@@ -73,16 +80,16 @@ Untuk menguji engine game secara cepat di latar belakang tanpa membuka jendela G
 
 ## 🕹️ Panduan Kontrol & Cara Bermain
 
-| Input / Tombol | Aksi Permainan | Keterangan / Fungsi |
-| :--- | :--- | :--- |
-| **Klik Kiri Mouse** | Seleksi Unit / Tile | Klik unit kawan (berwarna biru) untuk memilih unit dan membuka panel inspeksi taktis di sebelah kanan. |
-| **Tombol `[MOVE]`** | Perintah Gerak | Klik tombol `[MOVE]`, lalu klik salah satu tile yang di-highlight kuning pada grid medan perang. |
-| **Tombol `[ATTACK]`** | Perintah Serang | Klik tombol `[ATTACK]`, masukkan koordinat sasaran di kotak input teks (misal: `H8` atau `14, 8`), lalu klik `[CONFIRM]` atau tekan `Enter`. |
-| **Blind Bombardment** | Tembakan Buta | Anda dapat menembakkan artileri/tank ke dalam area kabut hitam (*Fog of War*) untuk menebak posisi lawan sekaligus membuka kabut di area $3 \times 3$ sekitar ledakan. |
-| **Tombol `[CANCEL]`** | Batal Perintah | Menghapus antrean perintah pada unit yang sedang dipilih. |
-| **Tombol `[READY]`** | Eksekusi Fase Perang | Mengunci seluruh perintah yang telah disusun dan memulai **War Phase** serentak bersama musuh. |
-| **WASD / Tombol Panah** | Geser Kamera (*Pan*) | Menggeser tampilan medan perang grid $24 \times 16$ tile secara bebas. |
-| **Escape / P** | Menu Jeda (*Pause*) | Membuka modal jeda untuk melanjutkan pertandingan, memulai ulang (*restart*), atau kembali ke menu utama. |
+| Input / Tombol                | Aksi Permainan         | Keterangan / Fungsi                                                                                                                                                        |
+| :---------------------------- | :--------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Klik Kiri Mouse**     | Seleksi Unit / Tile    | Klik unit kawan (berwarna biru) untuk memilih unit dan membuka panel inspeksi taktis di sebelah kanan.                                                                     |
+| **Tombol `[MOVE]`**   | Perintah Gerak         | Klik tombol `[MOVE]`, lalu klik salah satu tile yang di-highlight kuning pada grid medan perang.                                                                         |
+| **Tombol `[ATTACK]`** | Perintah Serang        | Klik tombol `[ATTACK]`, masukkan koordinat sasaran di kotak input teks (misal: `H8` atau `14, 8`), lalu klik `[CONFIRM]` atau tekan `Enter`.                     |
+| **Blind Bombardment**   | Tembakan Buta          | Anda dapat menembakkan artileri/tank ke dalam area kabut hitam (*Fog of War*) untuk menebak posisi lawan sekaligus membuka kabut di area $3 \times 3$ sekitar ledakan. |
+| **Tombol `[CANCEL]`** | Batal Perintah         | Menghapus antrean perintah pada unit yang sedang dipilih.                                                                                                                  |
+| **Tombol `[READY]`**  | Eksekusi Fase Perang   | Mengunci seluruh perintah yang telah disusun dan memulai **War Phase** serentak bersama musuh.                                                                       |
+| **WASD / Tombol Panah** | Geser Kamera (*Pan*) | Menggeser tampilan medan perang grid $24 \times 16$ tile secara bebas.                                                                                                   |
+| **Escape / P**          | Menu Jeda (*Pause*)  | Membuka modal jeda untuk melanjutkan pertandingan, memulai ulang (*restart*), atau kembali ke menu utama.                                                                |
 
 ---
 
@@ -108,6 +115,7 @@ Game ini memiliki 16 pengujian unit otomatis yang mencakup seluruh logika grid, 
 ```
 
 Contoh output yang diharapkan:
+
 ```text
 ============================= test session starts =============================
 collected 16 items
@@ -162,4 +170,4 @@ video-game/
 - **Role 2 (Gameplay, Mechanics & AI Programmer):** Mengembangkan mekanik unit, perilaku *Rule-Based AI*, deteksi tabrakan grid, dan resolusi pertempuran simultan.
 - **Role 3 (UI/UX Designer, Audio Integrator & QA Tester):** Merancang layout HUD taktis, transisi menu, integrasi aset SFX/BGM, dan eksekusi rencana pengujian (*playtesting*).
 
-*Panduan detail kontribusi dan aturan branch fitur dapat dilihat pada [PANDUAN_ROLE_TIM.md](file:///d:/Documents/Kuliahan/Tugas%20Kuliah/SEDANG%20DIKERJAKAN/GAME/Final%20Project/PANDUAN_ROLE_TIM.md).*
+*Panduan detail kontribusi dan aturan branch fitur dapat dilihat pada [PANDUAN_ROLE_TIM.md](<file:///d:/Documents/Kuliahan/Tugas%20Kuliah/SEDANG%20DIKERJAKAN/GAME/Final%20Project/PANDUAN_ROLE_TIM.md>).*
